@@ -12,7 +12,7 @@ import (
 func NewJWE(alg KeyAlgorithm, key interface{}, method EncryptionType, plaintext []byte) (*jwe, error) {
 	jwe := &jwe{}
 
-	jwe.protected.Enc = method
+	jwe.Header.Enc = method
 	chipher, err := getCipher(method)
 	if err != nil {
 		return nil, err
@@ -25,25 +25,25 @@ func NewJWE(alg KeyAlgorithm, key interface{}, method EncryptionType, plaintext 
 	}
 
 	// Encrypt the CEK with the recipient's public key to produce the JWE Encrypted Key.
-	jwe.protected.Alg = alg
+	jwe.Header.Alg = alg
 	encrypter, err := createEncrypter(key)
 	if err != nil {
 		return nil, err
 	}
-	jwe.recipientKey, err = encrypter.Encrypt(cek, alg)
+	jwe.RecipientKey, err = encrypter.Encrypt(cek, alg)
 	if err != nil {
 		return nil, err
 	}
 
 	// Serialize Authenticated Data
-	rawProtected, err := json.Marshal(jwe.protected)
+	rawProtected, err := json.Marshal(jwe.Header)
 	if err != nil {
 		return nil, err
 	}
 	rawProtectedBase64 := base64.RawURLEncoding.EncodeToString(rawProtected)
 
 	// Perform authenticated encryption on the plaintext
-	jwe.iv, jwe.ciphertext, jwe.tag, err = chipher.encrypt(cek, []byte(rawProtectedBase64), plaintext)
+	jwe.IV, jwe.Ciphertext, jwe.Tag, err = chipher.encrypt(cek, []byte(rawProtectedBase64), plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -54,37 +54,37 @@ func NewJWE(alg KeyAlgorithm, key interface{}, method EncryptionType, plaintext 
 // jwe internal structure represents JWE in unmarshalling format.
 type jwe struct {
 	// protected fields: alg - algorithm to encrypt a key and enc - algorithm to encrypt text.
-	protected struct {
+	Header struct {
 		Alg KeyAlgorithm   `json:"alg,omitempty"`
 		Enc EncryptionType `json:"enc,omitempty"`
-	}
+	} `json:"header"`
 
 	// recipientKey field is the key encrypted.
-	recipientKey []byte
+	RecipientKey []byte `json:"encrypted_key"`
 
 	// iv field is initialization vector.
-	iv []byte
+	IV []byte `json:"iv"`
 
 	// ciphertext filed is text encrypted by the enc with the key.
-	ciphertext []byte
+	Ciphertext []byte `json:"ciphertext"`
 
 	// tag field is authentication tag.
-	tag []byte
+	Tag []byte `json:"tag"`
 }
 
 // CompactSerialize serialize JWE to compact form.
 // https://datatracker.ietf.org/doc/html/rfc7516#section-3.1
 func (jwe *jwe) CompactSerialize() (string, error) {
-	rawProtected, err := json.Marshal(jwe.protected)
+	rawProtected, err := json.Marshal(jwe.Header)
 	if err != nil {
 		return "", err
 	}
 
 	protected := base64.RawURLEncoding.EncodeToString(rawProtected)
-	encryptedKey := base64.RawURLEncoding.EncodeToString(jwe.recipientKey)
-	iv := base64.RawURLEncoding.EncodeToString(jwe.iv)
-	ciphertext := base64.RawURLEncoding.EncodeToString(jwe.ciphertext)
-	tag := base64.RawURLEncoding.EncodeToString(jwe.tag)
+	encryptedKey := base64.RawURLEncoding.EncodeToString(jwe.RecipientKey)
+	iv := base64.RawURLEncoding.EncodeToString(jwe.IV)
+	ciphertext := base64.RawURLEncoding.EncodeToString(jwe.Ciphertext)
+	tag := base64.RawURLEncoding.EncodeToString(jwe.Tag)
 
 	return strings.Join([]string{protected, encryptedKey, iv, ciphertext, tag}, "."), nil
 }

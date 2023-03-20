@@ -14,7 +14,7 @@ var (
 // Decrypt decrypts JWE ciphertext with the key
 func (jwe jwe) Decrypt(key interface{}) ([]byte, error) {
 
-	method := jwe.protected.Enc
+	method := jwe.Header.Enc
 	if len(method) == 0 {
 		return nil, ErrMissingEncHeader
 	}
@@ -23,7 +23,7 @@ func (jwe jwe) Decrypt(key interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	alg := jwe.protected.Alg
+	alg := jwe.Header.Alg
 	if len(alg) == 0 {
 		return nil, ErrMissingAlgHeader
 	}
@@ -32,20 +32,20 @@ func (jwe jwe) Decrypt(key interface{}) ([]byte, error) {
 		return nil, err
 	}
 	// Decrypt JWE Encrypted Key with the recipient's private key to produce CEK.
-	cek, err := decrypter.Decrypt(jwe.recipientKey, alg)
+	cek, err := decrypter.Decrypt(jwe.RecipientKey, alg)
 	if err != nil {
 		return nil, err
 	}
 
 	// Serialize Authenticated Data
-	rawProtected, err := json.Marshal(jwe.protected)
+	rawProtected, err := json.Marshal(jwe.Header)
 	if err != nil {
 		return nil, err
 	}
 	rawProtectedBase64 := base64.RawURLEncoding.EncodeToString(rawProtected)
 
 	// Perform authenticated decryption on the ciphertext
-	data, err := cipher.decrypt(cek, []byte(rawProtectedBase64), jwe.iv, jwe.ciphertext, jwe.tag)
+	data, err := cipher.decrypt(cek, []byte(rawProtectedBase64), jwe.IV, jwe.Ciphertext, jwe.Tag)
 
 	return data, err
 }

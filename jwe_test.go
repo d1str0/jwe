@@ -6,11 +6,12 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
-	"github.com/golang-jwt/jwe"
 	"math/big"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/d1str0/jwe"
 )
 
 func TestParseEncrypted(t *testing.T) {

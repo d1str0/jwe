@@ -10,11 +10,20 @@ import (
 func ParseEncrypted(input string) (*jwe, error) {
 
 	if strings.HasPrefix(input, "{") {
-		// TODO (ortyomka): Add full version support
-		return nil, errors.New("don't support full JWE")
+		return parseEncrypted(input)
 	}
 
 	return parseEncryptedCompact(input)
+}
+
+func parseEncrypted(input string) (*jwe, error) {
+
+	encrypted := &jwe{}
+	err := json.Unmarshal([]byte(input), encrypted)
+	if err != nil {
+		return nil, errors.New("unable to parse JSON input")
+	}
+	return encrypted, nil
 }
 
 func parseEncryptedCompact(input string) (*jwe, error) {
@@ -35,24 +44,24 @@ func parseEncryptedCompact(input string) (*jwe, error) {
 		return nil, errors.New("protected headers are empty")
 	}
 
-	err = json.Unmarshal(rawProtected, &jwe.protected)
+	err = json.Unmarshal(rawProtected, &jwe.Header)
 	if err != nil {
 		return nil, errors.New("protected headers are not in JSON format")
 	}
 
-	jwe.recipientKey, err = base64.RawURLEncoding.DecodeString(parts[1])
+	jwe.RecipientKey, err = base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, err
 	}
-	jwe.iv, err = base64.RawURLEncoding.DecodeString(parts[2])
+	jwe.IV, err = base64.RawURLEncoding.DecodeString(parts[2])
 	if err != nil {
 		return nil, err
 	}
-	jwe.ciphertext, err = base64.RawURLEncoding.DecodeString(parts[3])
+	jwe.Ciphertext, err = base64.RawURLEncoding.DecodeString(parts[3])
 	if err != nil {
 		return nil, err
 	}
-	jwe.tag, err = base64.RawURLEncoding.DecodeString(parts[4])
+	jwe.Tag, err = base64.RawURLEncoding.DecodeString(parts[4])
 	if err != nil {
 		return nil, err
 	}
